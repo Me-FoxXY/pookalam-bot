@@ -409,33 +409,6 @@ async function cmdStats(token: string): Promise<void> {
   });
 }
 
-async function cmdHelp(token: string): Promise<void> {
-  await editOriginal(APP_ID, token, {
-    embeds: [
-      {
-        title: "🌼 Virtual Atham Pookkalam Guide 🪔",
-        description: "Welcome to the shared Onam Pookkalam! We are building a beautiful digital flower carpet together. Here's how you can join the celebration and help color the design!",
-        color: ONAM_GOLD,
-        fields: [
-          {
-            name: "✨ Getting Started",
-            value: "Use **/bloom** to quickly paint the next suggested petal (color-by-number) or **/paint** to choose a specific region and color a custom petal. You can contribute 1 petal every **3 minutes**!"
-          },
-          {
-            name: "🎮 Slash Commands",
-            value: "• **/bloom** — Color the next recommended petal.\n• **/paint** — Select a region and color a specific petal.\n• **/pookalam** — View the current progress of our shared carpet.\n• **/preview** — See what the final completed Pookkalam looks like.\n• **/leaderboard** — Show the top Pookkalam decorators.\n• **/stats** — See participation stats and total petals painted."
-          },
-          {
-            name: "🔗 Invite the Bot",
-            value: `Invite the bot to your own server: [Add to Discord](https://discord.com/oauth2/authorize?client_id=${APP_ID}&permissions=2147483648&scope=bot%20applications.commands)`
-          }
-        ],
-        footer: { text: "Atham Pookkalam 2026 · Happy Onam 🌾" }
-      }
-    ]
-  });
-}
-
 // ------------------------------------------------------------------ //
 // Entry point.
 // ------------------------------------------------------------------ //
@@ -493,9 +466,6 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         return;
       case "preview":
         defer(res, false, () => cmdPreview(token));
-        return;
-      case "help":
-        defer(res, false, () => cmdHelp(token));
         return;
       case "bloom": {
         // Ack first (cold-start safe), then check cooldown + build the UI.
