@@ -394,14 +394,14 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         defer(res, false, () => cmdLeaderboard(token));
         return;
       case "bloom": {
-        // Up-front cooldown check so we don't make them set up a doomed bloom.
-        const remain = iu ? await cooldownRemainingMs(iu.discordId) : 0;
-        if (remain > 0) {
-          reply(res, { type: CallbackType.CHANNEL_MESSAGE, data: { flags: MessageFlags.EPHEMERAL, content: cooldownMsg(remain) } });
-          return;
-        }
+        // Ack first (cold-start safe), then check cooldown + build the UI.
         // Public message; only the invoker can use the buttons (guarded below).
         defer(res, false, async () => {
+          const remain = iu ? await cooldownRemainingMs(iu.discordId) : 0;
+          if (remain > 0) {
+            await editOriginal(APP_ID, token, { content: cooldownMsg(remain), embeds: [], components: [] });
+            return;
+          }
           const cells = await fetchCells();
           const next = openSections(cells)[0];
           if (!next) return bloomComplete(token);
@@ -410,15 +410,14 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         return;
       }
       case "paint": {
-        const remain = iu ? await cooldownRemainingMs(iu.discordId) : 0;
-        if (remain > 0) {
-          reply(res, { type: CallbackType.CHANNEL_MESSAGE, data: { flags: MessageFlags.EPHEMERAL, content: cooldownMsg(remain) } });
-          return;
-        }
-        // Public region menu; only the invoker can use it (guarded below).
-        reply(res, {
-          type: CallbackType.CHANNEL_MESSAGE,
-          data: { content: "Where would you like to paint?", components: [regionSelect()] },
+        // Ack first (cold-start safe), then check cooldown + show the region menu.
+        defer(res, false, async () => {
+          const remain = iu ? await cooldownRemainingMs(iu.discordId) : 0;
+          if (remain > 0) {
+            await editOriginal(APP_ID, token, { content: cooldownMsg(remain), embeds: [], components: [] });
+            return;
+          }
+          await editOriginal(APP_ID, token, { content: "Where would you like to paint?", components: [regionSelect()] });
         });
         return;
       }
