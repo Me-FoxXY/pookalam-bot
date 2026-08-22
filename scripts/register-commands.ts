@@ -55,6 +55,7 @@ const commands = [
   { name: "paint", description: "Choose a specific petal and colour it", type: 1 },
   { name: "leaderboard", description: "Top pookkalam contributors", type: 1 },
   { name: "stats", description: "Who painted the pookkalam, and how much", type: 1 },
+  { name: "preview", description: "Preview the finished pookkalam design", type: 1 },
 ];
 
 const url = GUILD_ID

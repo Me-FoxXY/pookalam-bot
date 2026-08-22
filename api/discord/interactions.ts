@@ -324,6 +324,28 @@ async function cmdPookalam(token: string): Promise<void> {
   );
 }
 
+async function cmdPreview(token: string): Promise<void> {
+  // Every section shown in its suggested colour — the finished design.
+  const finished = new Map<string, PaletteColor>(SECTIONS.map((s) => [s.id, s.correctColor]));
+  const png = renderPng(finished);
+  await editOriginal(
+    APP_ID,
+    token,
+    {
+      embeds: [
+        {
+          title: "🌼 Finished Pookkalam — preview",
+          description: "Here's the full design, with every petal in its suggested flower colour. Help bring it to life with `/bloom` or `/paint`! 🌸",
+          color: ONAM_GOLD,
+          image: { url: IMG },
+          footer: { text: "Atham Pookkalam 2026 · Happy Onam 🌾" },
+        },
+      ],
+    },
+    png,
+  );
+}
+
 async function cmdLeaderboard(token: string): Promise<void> {
   const { prisma } = await import("../_lib/prisma.js");
   const rows = await prisma.cell.groupBy({
@@ -441,6 +463,9 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         return;
       case "stats":
         defer(res, false, () => cmdStats(token));
+        return;
+      case "preview":
+        defer(res, false, () => cmdPreview(token));
         return;
       case "bloom": {
         // Ack first (cold-start safe), then check cooldown + build the UI.
