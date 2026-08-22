@@ -13,9 +13,6 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@prisma/client": "^6.1.0",
     "@prisma/extension-accelerate": "^1.2.1",
