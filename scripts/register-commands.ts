@@ -14,20 +14,26 @@ import { dirname, resolve } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "..");
 
-// Minimal .env loader (no dependency) — later files do not override earlier ones.
+// Minimal .env loader (no dependency). Handles quoted values and inline
+// comments; a non-empty value overrides an earlier empty one for the same key.
+function parseVal(s: string): string {
+  s = s.trim();
+  if (s.startsWith('"')) { const e = s.indexOf('"', 1); return e >= 0 ? s.slice(1, e) : s.slice(1); }
+  if (s.startsWith("'")) { const e = s.indexOf("'", 1); return e >= 0 ? s.slice(1, e) : s.slice(1); }
+  const hash = s.indexOf(" #");
+  if (hash >= 0) s = s.slice(0, hash);
+  return s.trim();
+}
 for (const file of [".env.local", ".env"]) {
   try {
     const text = readFileSync(resolve(ROOT, file), "utf8");
     for (const line of text.split("\n")) {
-      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/i);
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=(.*)$/i);
       if (!m) continue;
       const key = m[1];
-      if (process.env[key] !== undefined) continue;
-      let val = m[2].trim();
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-        val = val.slice(1, -1);
-      }
-      process.env[key] = val;
+      if (process.env[key]) continue; // a real (non-empty) value already wins
+      const val = parseVal(m[2]);
+      if (val !== "" || process.env[key] === undefined) process.env[key] = val;
     }
   } catch {
     /* file may not exist */
