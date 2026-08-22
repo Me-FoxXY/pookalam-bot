@@ -9,7 +9,7 @@
     "generate": "tsx scripts/generate-pookkalam.ts",
     "register-commands": "tsx scripts/register-commands.ts",
     "reset-carpet": "tsx scripts/reset-carpet.ts",
-    "build": "prisma generate",
+    "build": "prisma generate && tsx scripts/register-commands.ts",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed"
