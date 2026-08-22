@@ -1,0 +1,31 @@
+{
+  "name": "virtual-atham-bot",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Fully Discord-native Onam pookkalam — a serverless slash-command bot.",
+  "scripts": {
+    "typecheck": "tsc",
+    "generate": "tsx scripts/generate-pookkalam.ts",
+    "register-commands": "tsx scripts/register-commands.ts",
+    "build": "prisma generate",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0",
+    "@prisma/extension-accelerate": "^1.2.1",
+    "@resvg/resvg-js": "^2.6.2",
+    "@vercel/functions": "^2.2.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22.16.5",
+    "prisma": "^6.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+}

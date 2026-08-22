@@ -1,0 +1,68 @@
+/**
+ * Register the bot's slash commands with Discord.
+ *
+ *   npx tsx scripts/register-commands.ts
+ *
+ * Registers to a single guild (instant) when DISCORD_GUILD_ID is set, otherwise
+ * globally (can take up to ~1h to propagate). Needs DISCORD_BOT_TOKEN and
+ * DISCORD_APPLICATION_ID in the environment (read from .env.local / .env).
+ */
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, "..");
+
+// Minimal .env loader (no dependency) — later files do not override earlier ones.
+for (const file of [".env.local", ".env"]) {
+  try {
+    const text = readFileSync(resolve(ROOT, file), "utf8");
+    for (const line of text.split("\n")) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/i);
+      if (!m) continue;
+      const key = m[1];
+      if (process.env[key] !== undefined) continue;
+      let val = m[2].trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      process.env[key] = val;
+    }
+  } catch {
+    /* file may not exist */
+  }
+}
+
+const TOKEN = process.env.DISCORD_BOT_TOKEN;
+const APP_ID = process.env.DISCORD_APPLICATION_ID || process.env.DISCORD_CLIENT_ID;
+const GUILD_ID = process.env.DISCORD_GUILD_ID;
+
+if (!TOKEN || !APP_ID) {
+  console.error("Missing DISCORD_BOT_TOKEN or DISCORD_APPLICATION_ID (DISCORD_CLIENT_ID) in the environment.");
+  process.exit(1);
+}
+
+const commands = [
+  { name: "pookalam", description: "Show the shared Onam pookkalam and how full it is", type: 1 },
+  { name: "bloom", description: "Quickly bloom the next suggested petal (guided colour-by-number)", type: 1 },
+  { name: "paint", description: "Choose a specific petal and colour it", type: 1 },
+  { name: "leaderboard", description: "Top pookkalam contributors", type: 1 },
+];
+
+const url = GUILD_ID
+  ? `https://discord.com/api/v10/applications/${APP_ID}/guilds/${GUILD_ID}/commands`
+  : `https://discord.com/api/v10/applications/${APP_ID}/commands`;
+
+const res = await fetch(url, {
+  method: "PUT",
+  headers: { Authorization: `Bot ${TOKEN}`, "Content-Type": "application/json" },
+  body: JSON.stringify(commands),
+});
+
+if (!res.ok) {
+  console.error(`Failed (${res.status}):`, await res.text());
+  process.exit(1);
+}
+
+console.log(`Registered ${commands.length} commands ${GUILD_ID ? `to guild ${GUILD_ID}` : "globally"}.`);

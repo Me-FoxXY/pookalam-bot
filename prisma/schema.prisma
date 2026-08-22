@@ -1,0 +1,60 @@
+// Prisma Postgres schema for Virtual Atham.
+// After editing: `npm run db:push` (create tables) then `npm run db:seed`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Fixed traditional-flower palette. Keep in sync with src/lib/palette.ts.
+enum PaletteColor {
+  maroon
+  orange
+  saffron
+  purple
+  lavender
+  white
+  pink
+  green
+  yellow
+  red
+}
+
+/// Immutable carpet definition (seeded from the generated geometry).
+model Section {
+  id           String       @id
+  ring         Int
+  band         String
+  code         String
+  correctColor PaletteColor
+  cell         Cell?
+}
+
+/// Mutable painted state. Absent row == un-painted.
+model Cell {
+  sectionId    String       @id
+  color        PaletteColor
+  filledBy     String // Profile.id
+  filledByName String
+  filledAt     DateTime     @default(now())
+  version      Int          @default(1)
+  section      Section      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@index([filledBy])
+  @@index([filledAt])
+}
+
+/// A signed-in Discord member.
+model Profile {
+  id           String    @id @default(cuid())
+  discordId    String    @unique
+  name         String
+  avatarUrl    String?
+  paintCount   Int       @default(0)
+  lastActionAt DateTime?
+  createdAt    DateTime  @default(now())
+}
