@@ -8,6 +8,7 @@
     "typecheck": "tsc",
     "generate": "tsx scripts/generate-pookkalam.ts",
     "register-commands": "tsx scripts/register-commands.ts",
+    "reset-carpet": "tsx scripts/reset-carpet.ts",
     "build": "prisma generate",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
