@@ -8,7 +8,7 @@ const VALID_IDS = new Set(SECTIONS.map((s) => s.id));
 const VALID_COLORS = new Set<string>(PALETTE_COLORS);
 
 /** One petal per user per this window — keeps any single person from filling the carpet. */
-export const COOLDOWN_MS = 60_000;
+export const COOLDOWN_MS = 3 * 60_000; // 3 minutes
 
 /** The party doing the write. `id` is a Profile.id (cuid), same as the web session. */
 export interface PaintUser {
@@ -82,6 +82,16 @@ export async function resolveProfile(discordId: string, name: string, avatarUrl:
     update: { name, avatarUrl },
   });
   return { id: p.id, name, discordId };
+}
+
+/**
+ * Milliseconds remaining on a user's cooldown (0 = ready). Looked up by Discord
+ * id so commands can check it up-front, before showing the paint UI.
+ */
+export async function cooldownRemainingMs(discordId: string): Promise<number> {
+  const p = await prisma.profile.findUnique({ where: { discordId }, select: { lastActionAt: true } });
+  if (!p?.lastActionAt) return 0;
+  return Math.max(0, COOLDOWN_MS - (Date.now() - p.lastActionAt.getTime()));
 }
 
 /** Full painted snapshot as sectionId → colour. */

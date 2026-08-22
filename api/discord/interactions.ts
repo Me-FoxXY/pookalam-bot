@@ -13,7 +13,7 @@ import {
   verifyDiscordSignature,
   type EditPayload,
 } from "../_lib/interactions.js";
-import { applyPaint, resolveProfile, fetchCells, type PaintUser } from "../_lib/paint-core.js";
+import { applyPaint, resolveProfile, fetchCells, cooldownRemainingMs, type PaintUser } from "../_lib/paint-core.js";
 import { renderPng } from "../_lib/render.js";
 import { SECTIONS } from "../../src/generated/pookkalam.geometry.js";
 import { PALETTE_ORDER, labelOf, flowerOf, type PaletteColor } from "../../src/lib/palette.js";
@@ -67,6 +67,19 @@ function runBackground(work: () => Promise<void>): void {
 function progress(cells: Map<string, PaletteColor>) {
   const filled = cells.size;
   return { filled, pct: Math.round((filled / TOTAL) * 100) };
+}
+
+/** Human-friendly cooldown remaining, e.g. "2m 14s" or "9s". */
+function fmtDuration(ms: number): string {
+  const s = Math.ceil(ms / 1000);
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  if (m > 0) return rem > 0 ? `${m}m ${rem}s` : `${m}m`;
+  return `${rem}s`;
+}
+
+function cooldownMsg(remainMs: number): string {
+  return `⏳ You've bloomed recently — you can add another petal in **${fmtDuration(remainMs)}**.`;
 }
 
 function row(...components: unknown[]) {
@@ -248,7 +261,7 @@ async function doPaint(token: string, user: PaintUser, sectionId: string, colour
   if (!result.ok) {
     let content: string;
     if (result.error === "cooldown") {
-      content = `⏳ One petal per minute — you can bloom again in **${result.retryAfterSec}s**.`;
+      content = cooldownMsg((result.retryAfterSec ?? 0) * 1000);
     } else if (result.status === 429) {
       content = "⏳ Slow down a moment, then try again.";
     } else {
@@ -274,8 +287,8 @@ async function doPaint(token: string, user: PaintUser, sectionId: string, colour
       content: `🌸 ${who} bloomed a **${labelOf(colour as PaletteColor)}** petal! (${filled}/${TOTAL} · ${pct}%)`,
       embeds: [
         {
-          title: "Come back in a minute 🌾",
-          description: "You can bloom another petal in **1 minute**. Run `/pookalam` any time to watch the carpet fill up.",
+          title: "Come back soon 🌾",
+          description: "You can bloom another petal in **3 minutes**. Run `/pookalam` any time to watch the carpet fill up.",
           color: ONAM_GOLD,
           image: { url: IMG },
         },
@@ -371,6 +384,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
   // ---- Slash commands ----
   if (body.type === InteractionType.APPLICATION_COMMAND) {
     const name: string = body.data?.name;
+    const iu = extractUser(body);
 
     switch (name) {
       case "pookalam":
@@ -380,6 +394,12 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         defer(res, false, () => cmdLeaderboard(token));
         return;
       case "bloom": {
+        // Up-front cooldown check so we don't make them set up a doomed bloom.
+        const remain = iu ? await cooldownRemainingMs(iu.discordId) : 0;
+        if (remain > 0) {
+          reply(res, { type: CallbackType.CHANNEL_MESSAGE, data: { flags: MessageFlags.EPHEMERAL, content: cooldownMsg(remain) } });
+          return;
+        }
         // Public message; only the invoker can use the buttons (guarded below).
         defer(res, false, async () => {
           const cells = await fetchCells();
@@ -389,13 +409,19 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         });
         return;
       }
-      case "paint":
+      case "paint": {
+        const remain = iu ? await cooldownRemainingMs(iu.discordId) : 0;
+        if (remain > 0) {
+          reply(res, { type: CallbackType.CHANNEL_MESSAGE, data: { flags: MessageFlags.EPHEMERAL, content: cooldownMsg(remain) } });
+          return;
+        }
         // Public region menu; only the invoker can use it (guarded below).
         reply(res, {
           type: CallbackType.CHANNEL_MESSAGE,
           data: { content: "Where would you like to paint?", components: [regionSelect()] },
         });
         return;
+      }
       default:
         reply(res, { type: CallbackType.CHANNEL_MESSAGE, data: { flags: MessageFlags.EPHEMERAL, content: "Unknown command." } });
         return;
