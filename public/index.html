@@ -3,23 +3,625 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>🌼 Virtual Atham — Discord Bot</title>
+    <title>🌼 Virtual Atham — Collaborative Discord Pookkalam Bot</title>
+    <meta name="description" content="Collaborate on a digital Onam Pookkalam flower carpet in Discord using slash commands. Invite the bot, color petals, and compete on the leaderboard." />
+    
+    <!-- Modern Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-      body { margin: 0; min-height: 100vh; display: grid; place-items: center;
-        background: #0b0c15; color: #f3e9d2; font-family: system-ui, sans-serif; text-align: center; padding: 2rem; }
-      h1 { font-size: 1.6rem; margin: 0 0 .5rem; }
-      p { opacity: .8; max-width: 32rem; line-height: 1.5; }
-      code { background: #1a1c28; padding: .15em .45em; border-radius: .35rem; }
+      :root {
+        --bg-main: #08090f;
+        --bg-card: rgba(18, 20, 32, 0.65);
+        --bg-card-hover: rgba(26, 29, 46, 0.8);
+        --border-glass: rgba(255, 255, 255, 0.08);
+        --border-gold: rgba(217, 119, 6, 0.3);
+        
+        --color-primary: #f59e0b; /* Saffron Gold */
+        --color-secondary: #db2777; /* Crimson/Pink */
+        --color-accent: #f43f5e; /* Rose */
+        --text-main: #f3e9d2; /* Soft warm white */
+        --text-muted: #9ba1b4;
+        
+        --font-primary: 'Outfit', system-ui, sans-serif;
+        --font-secondary: 'Plus Jakarta Sans', system-ui, sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--bg-main);
+        color: var(--text-main);
+        font-family: var(--font-primary);
+        min-height: 100vh;
+        overflow-x: hidden;
+        position: relative;
+        line-height: 1.6;
+      }
+
+      /* Glowing background blobs */
+      .bg-glow {
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(217, 119, 6, 0.12) 0%, rgba(219, 39, 119, 0.05) 50%, rgba(0,0,0,0) 70%);
+        filter: blur(80px);
+        z-index: -2;
+        pointer-events: none;
+      }
+      .bg-glow-1 { top: -200px; left: -100px; }
+      .bg-glow-2 { top: 40%; right: -200px; background: radial-gradient(circle, rgba(219, 39, 119, 0.1) 0%, rgba(217, 119, 6, 0.04) 50%, rgba(0,0,0,0) 70%); }
+      .bg-glow-3 { bottom: -200px; left: 10%; }
+
+      /* Grid Background pattern */
+      .bg-grid {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+        background-size: 50px 50px;
+        z-index: -1;
+        pointer-events: none;
+      }
+
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 1.5rem 4rem;
+        position: relative;
+      }
+
+      /* Floating Flower Petals Animation */
+      .petal {
+        position: absolute;
+        width: 15px;
+        height: 20px;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+        border-radius: 50% 0 50% 50%;
+        opacity: 0.7;
+        pointer-events: none;
+        z-index: -1;
+        animation: floatPetal 15s linear infinite;
+      }
+      
+      @keyframes floatPetal {
+        0% {
+          transform: translateY(-50px) rotate(0deg) translateX(0);
+          opacity: 0;
+        }
+        10% { opacity: 0.8; }
+        90% { opacity: 0.8; }
+        100% {
+          transform: translateY(105vh) rotate(720deg) translateX(120px);
+          opacity: 0;
+        }
+      }
+
+      /* TOP ANNOUNCEMENT BANNER */
+      .announcement-banner {
+        background: linear-gradient(90deg, rgba(217, 119, 6, 0.15) 0%, rgba(219, 39, 119, 0.15) 100%);
+        border: 1px solid var(--border-gold);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 100px;
+        padding: 0.75rem 2rem;
+        margin: 2rem auto 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        max-width: 900px;
+        animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+
+      .announcement-tag {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+        box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);
+      }
+
+      .announcement-text {
+        font-family: var(--font-secondary);
+        font-size: 0.9rem;
+        color: var(--text-main);
+        font-weight: 500;
+        text-align: center;
+      }
+
+      /* HERO SECTION */
+      .hero {
+        text-align: center;
+        padding: 2rem 0 4rem;
+        animation: fadeIn 0.8s ease-out;
+      }
+
+      .hero-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1.15;
+        margin-bottom: 1.5rem;
+        letter-spacing: -0.03em;
+        background: linear-gradient(135deg, #fff 30%, var(--color-primary) 70%, var(--color-secondary) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: inline-block;
+      }
+
+      .hero-subtitle {
+        font-size: 1.25rem;
+        color: var(--text-muted);
+        max-width: 600px;
+        margin: 0 auto 2.5rem;
+        font-weight: 400;
+        font-family: var(--font-secondary);
+      }
+
+      .cta-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.85rem 2rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: pointer;
+        font-family: var(--font-primary);
+        gap: 0.5rem;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--color-primary), #f5b041);
+        color: #08090f;
+        border: none;
+        box-shadow: 0 4px 20px rgba(245, 158, 11, 0.35);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(245, 158, 11, 0.5);
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-main);
+        border: 1px solid var(--border-glass);
+        backdrop-filter: blur(8px);
+      }
+
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: translateY(-2px);
+      }
+
+      /* COMMANDS SECTION */
+      .section-title {
+        font-size: 2rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 0.75rem;
+        letter-spacing: -0.02em;
+      }
+
+      .section-subtitle {
+        text-align: center;
+        color: var(--text-muted);
+        margin-bottom: 3rem;
+        font-size: 1.05rem;
+        font-family: var(--font-secondary);
+      }
+
+      .grid-commands {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 5rem;
+      }
+
+      .command-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-glass);
+        border-radius: 16px;
+        padding: 1.75rem;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .command-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(to bottom, var(--color-primary), var(--color-secondary));
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      .command-card:hover {
+        background: var(--bg-card-hover);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .command-card:hover::before {
+        opacity: 1;
+      }
+
+      .command-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+
+      .command-name {
+        font-family: monospace;
+        font-size: 1.2rem;
+        color: var(--color-primary);
+        font-weight: 700;
+        background: rgba(245, 158, 11, 0.1);
+        padding: 0.2rem 0.6rem;
+        border-radius: 6px;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+      }
+
+      .copy-icon {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        transition: color 0.2s ease;
+      }
+
+      .command-card:hover .copy-icon {
+        color: var(--color-primary);
+      }
+
+      .command-desc {
+        font-size: 0.95rem;
+        color: var(--text-muted);
+        font-family: var(--font-secondary);
+      }
+
+      /* Copy Tooltip */
+      .tooltip {
+        position: absolute;
+        bottom: 12px;
+        right: 16px;
+        background: var(--color-secondary);
+        color: #fff;
+        font-size: 0.75rem;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        opacity: 0;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        transform: translateY(5px);
+        pointer-events: none;
+        font-weight: 600;
+      }
+      .tooltip.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* HOW IT WORKS SECTION */
+      .how-it-works {
+        background: rgba(13, 14, 25, 0.4);
+        border: 1px solid var(--border-glass);
+        border-radius: 24px;
+        padding: 3rem 2.5rem;
+        margin-bottom: 5rem;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+
+      .steps-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 2.5rem;
+        margin-top: 3rem;
+      }
+
+      .step {
+        text-align: center;
+        position: relative;
+      }
+
+      .step-number {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+        color: #08090f;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);
+      }
+
+      .step-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .step-desc {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        font-family: var(--font-secondary);
+      }
+
+      /* FOOTER */
+      footer {
+        text-align: center;
+        padding: 2rem 0;
+        border-top: 1px solid var(--border-glass);
+        color: var(--text-muted);
+        font-family: var(--font-secondary);
+        font-size: 0.85rem;
+      }
+
+      footer p {
+        margin-bottom: 0.5rem;
+      }
+
+      footer a {
+        color: var(--color-primary);
+        text-decoration: none;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
+
+      /* Animations */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Responsive Styling */
+      @media (max-width: 768px) {
+        .hero-title {
+          font-size: 2.5rem;
+        }
+        .announcement-banner {
+          flex-direction: column;
+          border-radius: 20px;
+          padding: 1.25rem 1.5rem;
+          margin-top: 1rem;
+        }
+        .how-it-works {
+          padding: 2rem 1.5rem;
+        }
+      }
     </style>
   </head>
   <body>
-    <main>
-      <h1>🌼 Virtual Atham lives in Discord 🪔</h1>
-      <p>
-        This is the serverless home of the pookkalam bot. There's nothing to click here —
-        head to the Discord server and use <code>/pookalam</code>, <code>/bloom</code>,
-        or <code>/paint</code> to colour the shared carpet. Happy Onam! 🌾
-      </p>
-    </main>
+    <!-- Background elements -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+    <div class="bg-glow bg-glow-3"></div>
+    <div class="bg-grid"></div>
+
+    <div class="container">
+      
+      <!-- Top Announcement Alert -->
+      <div class="announcement-banner">
+        <span class="announcement-tag">🌾 Onam Announcement</span>
+        <span class="announcement-text">
+          Help us decorate the digital flower carpet! The bot is live on Discord. Let's bloom all petals together.
+        </span>
+      </div>
+
+      <!-- Hero Section -->
+      <header class="hero">
+        <h1 class="hero-title">🌼 Virtual Atham Pookkalam</h1>
+        <p class="hero-subtitle">
+          A serverless Discord slash-command bot that lets your entire server collaborate, customize, and paint a gorgeous digital Onam flower carpet.
+        </p>
+        <div class="cta-buttons">
+          <a href="https://discord.com/oauth2/authorize?client_id=1531947297058062446&permissions=2147483648&scope=bot%20applications.commands" 
+             id="invite-btn"
+             class="btn btn-primary" 
+             target="_blank">
+            <svg width="20" height="20" viewBox="0 0 127.14 96.36" fill="currentColor" style="margin-right: 0.25rem;">
+              <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a77.7,77.7,0,0,0,6.63-10.85,68.43,68.43,0,0,1-10.5-5A54.34,54.34,0,0,0,31,78.27a76,76,0,0,0,65.17,0,54.34,54.34,0,0,0,2.83,2.27,68.43,68.43,0,0,1-10.5,5,77.7,77.7,0,0,0,6.63,10.85,105.73,105.73,0,0,0,31-18.83C129.87,48.24,123.63,25.41,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.9,46,53.9,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.14,46,96.14,53,91,65.69,84.69,65.69Z"/>
+            </svg>
+            Add to Discord
+          </a>
+          <a href="#commands" id="view-commands-btn" class="btn btn-secondary">Explore Commands</a>
+        </div>
+      </header>
+
+      <!-- Commands Grid Section -->
+      <main id="commands">
+        <h2 class="section-title">🎮 Bot Slash Commands</h2>
+        <p class="section-subtitle">Click on any command card below to copy it to your clipboard.</p>
+        
+        <div class="grid-commands">
+          
+          <div class="command-card" id="cmd-bloom" onclick="copyCommand('/bloom')">
+            <div class="command-header">
+              <span class="command-name">/bloom</span>
+              <span class="copy-icon">📋</span>
+            </div>
+            <p class="command-desc">Recommended color-by-number mode. Highlights the next empty petal and suggests the traditional flower color.</p>
+            <span class="tooltip" id="tooltip-/bloom">Copied!</span>
+          </div>
+
+          <div class="command-card" id="cmd-paint" onclick="copyCommand('/paint')">
+            <div class="command-header">
+              <span class="command-name">/paint</span>
+              <span class="copy-icon">📋</span>
+            </div>
+            <p class="command-desc">Choose a specific region and paint a particular petal number with your choice of traditional flower colors.</p>
+            <span class="tooltip" id="tooltip-/paint">Copied!</span>
+          </div>
+
+          <div class="command-card" id="cmd-pookalam" onclick="copyCommand('/pookalam')">
+            <div class="command-header">
+              <span class="command-name">/pookalam</span>
+              <span class="copy-icon">📋</span>
+            </div>
+            <p class="command-desc">Displays the current progress of the community flower carpet. Rendered in real-time with active paints.</p>
+            <span class="tooltip" id="tooltip-/pookalam">Copied!</span>
+          </div>
+
+          <div class="command-card" id="cmd-leaderboard" onclick="copyCommand('/leaderboard')">
+            <div class="command-header">
+              <span class="command-name">/leaderboard</span>
+              <span class="copy-icon">📋</span>
+            </div>
+            <p class="command-desc">Showcases the top contributors in your guild who have helped color the most petals in the current carpet.</p>
+            <span class="tooltip" id="tooltip-/leaderboard">Copied!</span>
+          </div>
+
+          <div class="command-card" id="cmd-stats" onclick="copyCommand('/stats')">
+            <div class="command-header">
+              <span class="command-name">/stats</span>
+              <span class="copy-icon">📋</span>
+            </div>
+            <p class="command-desc">Generates visual statistics and contribution percentages showing who painted the carpet and how much.</p>
+            <span class="tooltip" id="tooltip-/stats">Copied!</span>
+          </div>
+
+          <div class="command-card" id="cmd-preview" onclick="copyCommand('/preview')">
+            <div class="command-header">
+              <span class="command-name">/preview</span>
+              <span class="copy-icon">📋</span>
+            </div>
+            <p class="command-desc">Sneak-peek at what the completed Pookkalam will look like once all petals are colored correctly.</p>
+            <span class="tooltip" id="tooltip-/preview">Copied!</span>
+          </div>
+
+          <div class="command-card" id="cmd-help" onclick="copyCommand('/help')">
+            <div class="command-header">
+              <span class="command-name">/help</span>
+              <span class="copy-icon">📋</span>
+            </div>
+            <p class="command-desc">Brings up an in-Discord guide, rules, server invitation details, and command descriptions.</p>
+            <span class="tooltip" id="tooltip-/help">Copied!</span>
+          </div>
+
+        </div>
+      </main>
+
+      <!-- How it Works section -->
+      <section class="how-it-works">
+        <h2 class="section-title">🌾 How We Build the Pookkalam</h2>
+        <p class="section-subtitle">A simple, fun collaborative effort for Onam.</p>
+        
+        <div class="steps-container">
+          <div class="step" id="step-1">
+            <div class="step-number">1</div>
+            <h3 class="step-title">Add the Bot</h3>
+            <p class="step-desc">Invite the bot to your Discord server using the button above.</p>
+          </div>
+          
+          <div class="step" id="step-2">
+            <div class="step-number">2</div>
+            <h3 class="step-title">Type a Command</h3>
+            <p class="step-desc">Use <code>/bloom</code> or <code>/paint</code> to receive an interactive painting board.</p>
+          </div>
+
+          <div class="step" id="step-3">
+            <div class="step-number">3</div>
+            <h3 class="step-title">Color a Petal</h3>
+            <p class="step-desc">Select the recommended flower or pick your own from the traditional palette.</p>
+          </div>
+
+          <div class="step" id="step-4">
+            <div class="step-number">4</div>
+            <h3 class="step-title">Observe Cooldown</h3>
+            <p class="step-desc">To keep it collaborative, each member has a 3-minute cooldown before they can color again!</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer>
+        <p>🌼 <strong>Virtual Atham Pookkalam Bot</strong> · Happy Onam 🌾</p>
+        <p>Built with Prisma Postgres, Vercel Serverless Functions, and Discord interactions.</p>
+      </footer>
+
+    </div>
+
+    <!-- Interactive script for coping commands -->
+    <script>
+      function copyCommand(text) {
+        navigator.clipboard.writeText(text).then(() => {
+          const tooltip = document.getElementById('tooltip-' + text);
+          if (tooltip) {
+            tooltip.classList.add('show');
+            setTimeout(() => {
+              tooltip.classList.remove('show');
+            }, 1500);
+          }
+        }).catch(err => {
+          console.error('Failed to copy command: ', err);
+        });
+      }
+
+      // Generate random floating petals
+      function createPetals() {
+        const colors = ['#f59e0b', '#db2777', '#f43f5e', '#ef4444', '#10b981', '#a855f7'];
+        const container = document.body;
+        
+        for (let i = 0; i < 15; i++) {
+          const petal = document.createElement('div');
+          petal.className = 'petal';
+          
+          // Random styling
+          petal.style.left = Math.random() * 100 + 'vw';
+          petal.style.top = Math.random() * -100 + 'px';
+          petal.style.background = `linear-gradient(135deg, ${colors[Math.floor(Math.random() * colors.length)]}, ${colors[Math.floor(Math.random() * colors.length)]})`;
+          petal.style.transform = `scale(${Math.random() * 0.6 + 0.4})`;
+          petal.style.animationDelay = Math.random() * 10 + 's';
+          petal.style.animationDuration = (Math.random() * 8 + 12) + 's';
+          
+          container.appendChild(petal);
+        }
+      }
+
+      window.addEventListener('DOMContentLoaded', createPetals);
+    </script>
   </body>
 </html>
