@@ -56,6 +56,7 @@ const commands = [
   { name: "leaderboard", description: "Top pookkalam contributors", type: 1 },
   { name: "stats", description: "Who painted the pookkalam, and how much", type: 1 },
   { name: "preview", description: "Preview the finished pookkalam design", type: 1 },
+  { name: "about", description: "Learn about the Virtual Atham Pookkalam bot and its commands", type: 1 },
 ];
 
 const url = GUILD_ID

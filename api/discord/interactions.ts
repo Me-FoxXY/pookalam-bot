@@ -409,6 +409,31 @@ async function cmdStats(token: string): Promise<void> {
   });
 }
 
+async function cmdAbout(token: string): Promise<void> {
+  await editOriginal(APP_ID, token, {
+    embeds: [
+      {
+        title: "🌼 Welcome to the Virtual Atham Pookkalam! 🪔",
+        description:
+          "Onam is around the corner! Since we can't gather in person to build a massive **Pookkalam (floral carpet)**, we brought one straight into our Discord! We have a giant shared, empty canvas, and we need *everyone's* help to fill it up with vibrant flower petals. 🌸✨\n\n" +
+          "### 🎮 Available Commands:\n" +
+          "• **/bloom** — **The Speedrun Mode:** The bot outlines a petal and suggests the correct traditional flower color. Just click the bloom button and boom—you've added a petal! 🌸\n" +
+          "• **/paint** — **The Artist Mode:** Choose a specific region (like the center hub, the lotus petals, or the outer rim), pick a numbered petal, and paint it whatever color you want! 🎨\n" +
+          "• **/pookalam** — See our gorgeous shared carpet's real-time progress and watch it fill up. 🌼\n" +
+          "• **/preview** — Sneak peek! See what the finished masterpiece will look like once every petal is successfully bloomed. 👀\n" +
+          "• **/leaderboard** — Show off your contribution. Who will claim the 🥇 gold medal for most petals painted? 🏆\n" +
+          "• **/stats** — See the detailed stats, percentage contributions, and active painters list. 📊\n\n" +
+          "### ⚡ Cooldown & Colors:\n" +
+          "• **Cooldown:** There is a **3-minute cooldown** between petal placements to give everyone a turn.\n" +
+          "• **Suggested Colors:** Try to match the suggested color of each petal (indicated by ⭐) to follow the original traditional pattern, or be creative with **10 flower colors**!\n\n" +
+          "Get in here, run **/bloom**, and let’s get this Pookkalam looking beautiful before Onam! Happy blooming! 🌾🌸",
+        color: ONAM_GOLD,
+        footer: { text: "Virtual Atham 2026 · Happy Onam 🌾" },
+      },
+    ],
+  });
+}
+
 // ------------------------------------------------------------------ //
 // Entry point.
 // ------------------------------------------------------------------ //
@@ -466,6 +491,9 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         return;
       case "preview":
         defer(res, false, () => cmdPreview(token));
+        return;
+      case "about":
+        defer(res, false, () => cmdAbout(token));
         return;
       case "bloom": {
         // Ack first (cold-start safe), then check cooldown + build the UI.
