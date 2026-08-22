@@ -243,20 +243,18 @@ async function showColourPick(token: string, sectionId: string): Promise<void> {
 // ------------------------------------------------------------------ //
 // Apply a paint, then advance the relevant flow.
 // ------------------------------------------------------------------ //
-async function doPaint(
-  token: string,
-  user: PaintUser,
-  sectionId: string,
-  colour: string,
-  mode: "bloom" | "paint",
-): Promise<void> {
+async function doPaint(token: string, user: PaintUser, sectionId: string, colour: string): Promise<void> {
   const result = await applyPaint(user, sectionId, colour);
   if (!result.ok) {
-    await editOriginal(APP_ID, token, {
-      content: result.status === 429 ? "⏳ Slow down a moment, then try again." : `⚠️ Couldn't paint that (${result.error}).`,
-      embeds: [],
-      components: [],
-    });
+    let content: string;
+    if (result.error === "cooldown") {
+      content = `⏳ One petal per minute — you can bloom again in **${result.retryAfterSec}s**.`;
+    } else if (result.status === 429) {
+      content = "⏳ Slow down a moment, then try again.";
+    } else {
+      content = `⚠️ Couldn't paint that (${result.error}).`;
+    }
+    await editOriginal(APP_ID, token, { content, embeds: [], components: [] });
     return;
   }
   if (result.justCompleted) {
@@ -264,49 +262,28 @@ async function doPaint(
     return;
   }
 
+  // One petal per bloom — no auto-advance. Show what they placed and the cooldown.
   const cells = await fetchCells();
   const { filled, pct } = progress(cells);
-
-  if (mode === "bloom") {
-    const next = openSections(cells)[0];
-    if (!next) return bloomComplete(token);
-    const png = renderPng(cells, { highlight: [next.id] });
-    await editOriginal(
-      APP_ID,
-      token,
-      {
-        content: `🌸 You bloomed a **${labelOf(colour as PaletteColor)}** petal! (${filled}/${TOTAL} · ${pct}%)`,
-        embeds: [
-          {
-            title: "Next petal",
-            description: `This one wants **${flowerOf(next.correctColor)}** (${labelOf(next.correctColor)}).`,
-            color: ONAM_GOLD,
-            image: { url: IMG },
-          },
-        ],
-        components: [
-          row(
-            button(`bloom:do:${next.id}:${next.correctColor}`, `🌸 Bloom ${labelOf(next.correctColor)}`, ButtonStyle.SUCCESS),
-            button(`bloom:other:${next.id}`, "🎨 Other colour", ButtonStyle.SECONDARY),
-            button(`bloom:skip:${next.id}`, "⏭️ Skip", ButtonStyle.SECONDARY),
-          ),
-        ],
-      },
-      png,
-    );
-  } else {
-    const png = renderPng(cells, { highlight: [sectionId] });
-    await editOriginal(
-      APP_ID,
-      token,
-      {
-        content: `🌸 Painted a **${labelOf(colour as PaletteColor)}** petal! (${filled}/${TOTAL} · ${pct}%)`,
-        embeds: [{ title: "Paint another?", color: ONAM_GOLD, image: { url: IMG } }],
-        components: [row(button("paint:again", "🎨 Paint another petal", ButtonStyle.PRIMARY))],
-      },
-      png,
-    );
-  }
+  const who = user.discordId ? `<@${user.discordId}>` : user.name;
+  const png = renderPng(cells, { highlight: [sectionId] });
+  await editOriginal(
+    APP_ID,
+    token,
+    {
+      content: `🌸 ${who} bloomed a **${labelOf(colour as PaletteColor)}** petal! (${filled}/${TOTAL} · ${pct}%)`,
+      embeds: [
+        {
+          title: "Come back in a minute 🌾",
+          description: "You can bloom another petal in **1 minute**. Run `/pookalam` any time to watch the carpet fill up.",
+          color: ONAM_GOLD,
+          image: { url: IMG },
+        },
+      ],
+      components: [],
+    },
+    png,
+  );
 }
 
 // ------------------------------------------------------------------ //
@@ -403,7 +380,8 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         defer(res, false, () => cmdLeaderboard(token));
         return;
       case "bloom": {
-        defer(res, true, async () => {
+        // Public message; only the invoker can use the buttons (guarded below).
+        defer(res, false, async () => {
           const cells = await fetchCells();
           const next = openSections(cells)[0];
           if (!next) return bloomComplete(token);
@@ -412,10 +390,10 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         return;
       }
       case "paint":
-        // No image/DB — respond immediately with the region menu (ephemeral).
+        // Public region menu; only the invoker can use it (guarded below).
         reply(res, {
           type: CallbackType.CHANNEL_MESSAGE,
-          data: { flags: MessageFlags.EPHEMERAL, content: "Where would you like to paint?", components: [regionSelect()] },
+          data: { content: "Where would you like to paint?", components: [regionSelect()] },
         });
         return;
       default:
@@ -433,6 +411,21 @@ export default async function handler(req: Req, res: Res): Promise<void> {
     const kind = parts[0];
     const action = parts[1];
 
+    // The message is public, but only its owner (the user who ran the command)
+    // may use the buttons. Anyone else gets a private nudge.
+    const invokerId: string | undefined =
+      body.message?.interaction_metadata?.user?.id ?? body.message?.interaction?.user?.id;
+    if (invokerId && iu && invokerId !== iu.discordId) {
+      reply(res, {
+        type: CallbackType.CHANNEL_MESSAGE,
+        data: {
+          flags: MessageFlags.EPHEMERAL,
+          content: `🌸 This is <@${invokerId}>'s pookkalam. Start your own with \`/bloom\` or \`/paint\`.`,
+        },
+      });
+      return;
+    }
+
     // Resolve the Profile lazily (only writes need it).
     const getUser = async (): Promise<PaintUser> =>
       iu ? resolveProfile(iu.discordId, iu.name, iu.avatarUrl) : { id: "unknown", name: "Malayali" };
@@ -440,7 +433,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
     if (kind === "bloom") {
       if (action === "do") {
         const [, , sectionId, colour] = parts;
-        deferUpdate(res, async () => doPaint(token, await getUser(), sectionId, colour, "bloom"));
+        deferUpdate(res, async () => doPaint(token, await getUser(), sectionId, colour));
         return;
       }
       if (action === "other") {
@@ -480,13 +473,7 @@ export default async function handler(req: Req, res: Res): Promise<void> {
       }
       if (action === "color") {
         const [, , sectionId, colour] = parts;
-        deferUpdate(res, async () => doPaint(token, await getUser(), sectionId, colour, "paint"));
-        return;
-      }
-      if (action === "again") {
-        deferUpdate(res, async () => {
-          await editOriginal(APP_ID, token, { content: "Where would you like to paint?", embeds: [], components: [regionSelect()] });
-        });
+        deferUpdate(res, async () => doPaint(token, await getUser(), sectionId, colour));
         return;
       }
     }

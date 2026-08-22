@@ -7,15 +7,19 @@ import { SECTIONS } from "../../src/generated/pookkalam.geometry.js";
 const VALID_IDS = new Set(SECTIONS.map((s) => s.id));
 const VALID_COLORS = new Set<string>(PALETTE_COLORS);
 
+/** One petal per user per this window — keeps any single person from filling the carpet. */
+export const COOLDOWN_MS = 60_000;
+
 /** The party doing the write. `id` is a Profile.id (cuid), same as the web session. */
 export interface PaintUser {
   id: string;
   name: string;
+  discordId?: string;
 }
 
 export type PaintResult =
   | { ok: true; color: PaletteColor; version: number; filledByName: string; justCompleted: boolean }
-  | { ok: false; error: string; status: number };
+  | { ok: false; error: string; status: number; retryAfterSec?: number };
 
 /**
  * The single validated paint write, shared by the web `/api/paint` route and the
@@ -28,10 +32,14 @@ export async function applyPaint(user: PaintUser, sectionId: string, color: stri
   if (!VALID_COLORS.has(color)) return { ok: false, error: "bad color", status: 400 };
 
   try {
-    const recent = await prisma.cell.count({
-      where: { filledBy: user.id, filledAt: { gt: new Date(Date.now() - 10_000) } },
-    });
-    if (recent > 15) return { ok: false, error: "slow down", status: 429 };
+    // Per-user cooldown: one petal per COOLDOWN_MS. Uses the last recorded action.
+    const prof = await prisma.profile.findUnique({ where: { id: user.id }, select: { lastActionAt: true } });
+    if (prof?.lastActionAt) {
+      const remaining = COOLDOWN_MS - (Date.now() - prof.lastActionAt.getTime());
+      if (remaining > 0) {
+        return { ok: false, error: "cooldown", status: 429, retryAfterSec: Math.ceil(remaining / 1000) };
+      }
+    }
 
     const cellExists = await prisma.cell.findUnique({ where: { sectionId } });
     const isLastCell = !cellExists && (await prisma.cell.count()) === SECTIONS.length - 1;
@@ -73,7 +81,7 @@ export async function resolveProfile(discordId: string, name: string, avatarUrl:
     create: { discordId, name, avatarUrl },
     update: { name, avatarUrl },
   });
-  return { id: p.id, name };
+  return { id: p.id, name, discordId };
 }
 
 /** Full painted snapshot as sectionId → colour. */
