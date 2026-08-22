@@ -70,7 +70,29 @@ const res = await fetch(url, {
 });
 
 if (!res.ok) {
-  console.error(`Failed (${res.status}):`, await res.text());
+  const text = await res.text();
+  console.error(`Failed (${res.status}):`, text);
+  
+  if (res.status === 403) {
+    try {
+      const err = JSON.parse(text);
+      if (err.code === 50001) {
+        console.error("\n==========================================================================");
+        console.error("🔴 DISCORD ERROR: 50001 - MISSING ACCESS");
+        console.error("==========================================================================");
+        if (GUILD_ID) {
+          console.error(`The bot lacks the 'applications.commands' scope in the target guild (ID: ${GUILD_ID}).`);
+        } else {
+          console.error("The bot lacks the 'applications.commands' scope for global registration.");
+        }
+        console.error("To fix this, please authorize the bot with the correct scopes by visiting this URL:");
+        console.error(`👉 https://discord.com/api/oauth2/authorize?client_id=${APP_ID}&permissions=0&scope=bot%20applications.commands`);
+        console.error("==========================================================================\n");
+      }
+    } catch {
+      // Ignore parsing errors
+    }
+  }
   process.exit(1);
 }
 
