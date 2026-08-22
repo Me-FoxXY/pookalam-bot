@@ -54,6 +54,7 @@ const commands = [
   { name: "bloom", description: "Quickly bloom the next suggested petal (guided colour-by-number)", type: 1 },
   { name: "paint", description: "Choose a specific petal and colour it", type: 1 },
   { name: "leaderboard", description: "Top pookkalam contributors", type: 1 },
+  { name: "stats", description: "Who painted the pookkalam, and how much", type: 1 },
 ];
 
 const url = GUILD_ID

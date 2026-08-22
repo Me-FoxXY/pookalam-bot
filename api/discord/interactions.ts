@@ -341,6 +341,52 @@ async function cmdLeaderboard(token: string): Promise<void> {
   });
 }
 
+async function cmdStats(token: string): Promise<void> {
+  const { prisma } = await import("../_lib/prisma.js");
+  const [rows, totalPainted] = await Promise.all([
+    prisma.cell.groupBy({
+      by: ["filledBy", "filledByName"],
+      _count: { sectionId: true },
+      orderBy: { _count: { sectionId: "desc" } },
+      take: 100,
+    }),
+    prisma.cell.count(),
+  ]);
+
+  if (rows.length === 0) {
+    await editOriginal(APP_ID, token, {
+      embeds: [{ title: "📊 Pookkalam stats", description: "No petals bloomed yet — be the first with `/bloom`! 🌸", color: ONAM_GOLD }],
+    });
+    return;
+  }
+
+  const pct = Math.round((totalPainted / TOTAL) * 100);
+  const medals = ["🥇", "🥈", "🥉"];
+  const MAX_LINES = 40;
+  const list = rows
+    .slice(0, MAX_LINES)
+    .map((r, i) => {
+      const rank = medals[i] ?? `\`${String(i + 1).padStart(2, " ")}.\``;
+      const share = totalPainted ? Math.round((r._count.sectionId / totalPainted) * 100) : 0;
+      const petals = r._count.sectionId;
+      return `${rank} **${r.filledByName ?? "Malayali"}** — ${petals} petal${petals === 1 ? "" : "s"} (${share}%)`;
+    })
+    .join("\n");
+  const overflow = rows.length > MAX_LINES ? `\n…and **${rows.length - MAX_LINES}** more painter${rows.length - MAX_LINES === 1 ? "" : "s"}` : "";
+  const summary = `**${totalPainted}/${TOTAL}** petals bloomed · **${pct}%** complete · **${rows.length}** painter${rows.length === 1 ? "" : "s"}`;
+
+  await editOriginal(APP_ID, token, {
+    embeds: [
+      {
+        title: "📊 Pookkalam stats",
+        description: `${summary}\n\n${list}${overflow}`,
+        color: ONAM_GOLD,
+        footer: { text: "Atham Pookkalam 2026 · Happy Onam 🌾" },
+      },
+    ],
+  });
+}
+
 // ------------------------------------------------------------------ //
 // Entry point.
 // ------------------------------------------------------------------ //
@@ -392,6 +438,9 @@ export default async function handler(req: Req, res: Res): Promise<void> {
         return;
       case "leaderboard":
         defer(res, false, () => cmdLeaderboard(token));
+        return;
+      case "stats":
+        defer(res, false, () => cmdStats(token));
         return;
       case "bloom": {
         // Ack first (cold-start safe), then check cooldown + build the UI.
